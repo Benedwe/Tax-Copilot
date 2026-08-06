@@ -1,0 +1,113 @@
+// Tax Copilot — database schema
+// Run `npm run prisma:migrate` after setting DATABASE_URL in .env
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DocumentType {
+  NATIONAL_ID
+  SALARY_SLIP
+  BANK_STATEMENT
+  BUSINESS_INCOME
+  RECEIPT
+  OTHER
+}
+
+enum DocumentStatus {
+  UPLOADED
+  PROCESSING
+  EXTRACTED
+  NEEDS_REVIEW
+  VERIFIED
+  FAILED
+}
+
+enum ReturnStatus {
+  DRAFT
+  DOCUMENTS_PENDING
+  READY_FOR_REVIEW
+  REVIEWED
+  GENERATED
+  FILED // reserved for future direct-submission feature
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String?
+  authProvider String   @default("password") // "password" | "google"
+  tin          String? // TRA Taxpayer Identification Number
+  country      String   @default("TZ")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  documents   Document[]
+  taxReturns  TaxReturn[]
+}
+
+model Document {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName   String
+  type       DocumentType
+  storageUrl String // local path in dev, Firebase Storage URL in prod
+  mimeType   String
+  sizeBytes  Int
+  status     DocumentStatus @default(UPLOADED)
+  taxReturnId String?
+  taxReturn   TaxReturn?    @relation(fields: [taxReturnId], references: [id])
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  extractions AiExtraction[]
+}
+
+model AiExtraction {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  field      String // e.g. "grossSalary", "employerTin", "taxPaid"
+  value      String
+  confidence Float // 0.0 - 1.0
+  createdAt  DateTime @default(now())
+}
+
+model TaxReturn {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year      Int
+  status    ReturnStatus @default(DRAFT)
+
+  grossIncome     Decimal @default(0) @db.Decimal(14, 2)
+  taxableIncome   Decimal @default(0) @db.Decimal(14, 2)
+  totalDeductions Decimal @default(0) @db.Decimal(14, 2)
+  taxDue          Decimal @default(0) @db.Decimal(14, 2)
+  taxPaid         Decimal @default(0) @db.Decimal(14, 2)
+  balance         Decimal @default(0) @db.Decimal(14, 2) // positive = owed, negative = refund
+
+  deductions Deduction[]
+  documents  Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Deduction {
+  id          String    @id @default(uuid())
+  taxReturnId String
+  taxReturn   TaxReturn @relation(fields: [taxReturnId], references: [id], onDelete: Cascade)
+  category    String // "education" | "medical" | "charity" | "business_expense" | ...
+  description String?
+  amount      Decimal   @db.Decimal(14, 2)
+  sourceDocumentId String?
+  createdAt   DateTime  @default(now())
+}

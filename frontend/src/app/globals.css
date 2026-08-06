@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-paper text-ink font-body antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  ::selection {
+    background: #e4c878;
+    color: #12213a;
+  }
+  :focus-visible {
+    outline: 2px solid #b8892b;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Perforated top edge, like tearing a receipt off a roll */
+  .receipt-edge {
+    position: relative;
+  }
+  .receipt-edge::before {
+    content: "";
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    background-image: radial-gradient(circle at 8px 0, transparent 5px, #f7f3e9 5.5px);
+    background-size: 16px 8px;
+    background-repeat: repeat-x;
+  }
+
+  .stamp-ring {
+    border: 1.5px solid currentColor;
+    border-radius: 9999px;
+  }
+
+  .input {
+    @apply w-full rounded-sm border border-paper-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-brass focus:outline-none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
