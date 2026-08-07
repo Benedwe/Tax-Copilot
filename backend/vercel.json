@@ -1,6 +1,9 @@
 {
-  "version": 2,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/index.js" }
-  ]
+  "framework": "express",
+  "buildCommand": "npm run vercel-build",
+  "functions": {
+    "src/app.js": {
+      "maxDuration": 60
+    }
+  }
 }

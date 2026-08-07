@@ -1,34 +1,36 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "backend/api/index.js",
-      "use": "@vercel/node"
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "nextjs"
     },
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/next"
+    "backend": {
+      "root": "backend",
+      "framework": "express",
+      "buildCommand": "npm run vercel-build",
+      "functions": {
+        "src/app.js": {
+          "maxDuration": 60
+        }
+      }
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/backend/api/index.js"
+      "source": "/api/(.*)",
+      "destination": { "service": "backend" }
     },
     {
-      "src": "/health",
-      "dest": "/backend/api/index.js"
+      "source": "/health",
+      "destination": { "service": "backend" }
     },
     {
-      "src": "/uploads/(.*)",
-      "dest": "/backend/api/index.js"
+      "source": "/uploads/(.*)",
+      "destination": { "service": "backend" }
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "source": "/(.*)",
+      "destination": { "service": "frontend" }
     }
   ]
 }

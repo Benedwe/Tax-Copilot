@@ -61,32 +61,50 @@ upload a sample salary slip (any PDF/JPG works — mock mode ignores the
 actual content and returns realistic sample fields so you can see the
 whole flow).
 
-## Deploying
+## Deploying to Vercel
 
-### Backend → Vercel
+The repo includes a root [`vercel.json`](vercel.json) that deploys the Next.js
+frontend and Express backend together as [Vercel Services](https://vercel.com/docs/services)
+on one domain (`/` → frontend, `/api/*` → backend).
+
+### Recommended: unified deploy (one Vercel project)
 
 1. Push this repo to GitHub.
-2. In Vercel: **New Project → Import** the repo and set `/backend` as the
-   root directory.
-3. Add the env vars from `backend/.env.example`:
-   - `DATABASE_URL`
-   - `FRONTEND_ORIGIN` = your frontend Vercel URL
-   - `OPENAI_API_KEY` / `GOOGLE_VISION_API_KEY` (optional for OCR/AI)
-   - `STORAGE_DRIVER=supabase` if you want uploads in Supabase Storage
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `SUPABASE_STORAGE_BUCKET`
-   - `JWT_SECRET` is still used for the local JWT fallback path
-4. Vercel will detect the Node API and deploy your `/backend/api` serverless
-   handlers automatically.
+2. In Vercel: **Add New → Project → Import** the repo.
+3. Leave the **root directory** as `.` (repo root).
+4. In **Build & Deployment → Framework Preset**, choose **Services**.
+5. Add environment variables (Project Settings → Environment Variables):
 
-### Frontend → Vercel
+   **Shared / backend**
+   - `DATABASE_URL` — Postgres connection string ([Vercel Postgres](https://vercel.com/docs/postgres), [Neon](https://neon.tech), etc.)
+   - `JWT_SECRET` — long random string
+   - `FRONTEND_ORIGIN` — your Vercel deployment URL (e.g. `https://tax-copilot.vercel.app`)
+   - `STORAGE_DRIVER=supabase` — required on Vercel (local disk is ephemeral)
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`
+   - `OPENAI_API_KEY` / `GOOGLE_VISION_API_KEY` (optional; mock mode works without them)
 
-1. **New Project → Import** the same repo, set `/frontend` as the root
-   directory (Vercel auto-detects Next.js).
-2. Add the env var `NEXT_PUBLIC_API_URL` = your Railway backend URL.
-3. Deploy. Once it's live, go back to Railway and set `FRONTEND_ORIGIN`
-   to the Vercel URL so CORS allows it.
+   **Frontend (Supabase auth)**
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
+
+   Do **not** set `NEXT_PUBLIC_API_URL` for unified deploy — the frontend
+   calls `/api` on the same origin automatically.
+
+6. Deploy. The backend build runs `prisma generate && prisma migrate deploy`.
+
+### Alternative: split deploy (two Vercel projects)
+
+Use this if you prefer separate scaling or domains for frontend and backend.
+
+**Backend project** — root directory: `backend`
+- Uses [`backend/vercel.json`](backend/vercel.json) (Express auto-detected from `src/app.js`)
+- Set all backend env vars from `backend/.env.example`
+- Set `FRONTEND_ORIGIN` to your frontend Vercel URL
+
+**Frontend project** — root directory: `frontend`
+- Set `NEXT_PUBLIC_API_URL` to your backend Vercel URL
+- Set Supabase `NEXT_PUBLIC_*` vars from `frontend/.env.local.example`
+- After deploy, confirm `FRONTEND_ORIGIN` on the backend matches the frontend URL
 
 ## Known limitations / next steps
 
@@ -103,4 +121,3 @@ whole flow).
 - No automated tests yet. The tax engine and extraction pipeline were
   smoke-tested manually during development; worth adding a test suite
   before this handles real user data.
-# Tax-Copilot

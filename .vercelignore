@@ -1,0 +1,16 @@
+# Dependencies and build artifacts
+**/node_modules
+**/.next
+**/dist
+
+# Local env and secrets
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Local uploads (use Supabase Storage in production)
+backend/uploads/**
+
+# Dev tooling
+**/*.log
+.git
