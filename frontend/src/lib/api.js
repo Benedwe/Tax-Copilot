@@ -1,21 +1,18 @@
+import { supabase } from "./supabaseClient";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-function getToken() {
+async function getToken() {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("tc_token");
-}
-
-export function setToken(token) {
-  if (typeof window === "undefined") return;
-  if (token) window.localStorage.setItem("tc_token", token);
-  else window.localStorage.removeItem("tc_token");
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.access_token ?? null;
 }
 
 async function request(path, { method = "GET", body, isForm = false, auth = true } = {}) {
   const headers = {};
   if (!isForm) headers["Content-Type"] = "application/json";
   if (auth) {
-    const token = getToken();
+    const token = await getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
@@ -36,9 +33,6 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
 }
 
 export const api = {
-  register: (payload) => request("/api/auth/register", { method: "POST", body: payload, auth: false }),
-  login: (payload) => request("/api/auth/login", { method: "POST", body: payload, auth: false }),
-
   quickCalculate: (payload) => request("/api/calculator", { method: "POST", body: payload, auth: false }),
 
   listTaxReturns: () => request("/api/tax-returns"),
@@ -52,7 +46,7 @@ export const api = {
   markReviewed: (id) => request(`/api/tax-returns/${id}/mark-reviewed`, { method: "POST" }),
   pdfUrl: (id) => `${API_URL}/api/tax-returns/${id}/pdf`,
   downloadPdf: async (id, filename) => {
-    const token = getToken();
+    const token = await getToken();
     const res = await fetch(`${API_URL}/api/tax-returns/${id}/pdf`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

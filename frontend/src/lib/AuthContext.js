@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, setToken, getToken } from "./api";
+import { supabase } from "./supabaseClient";
 
 const AuthContext = createContext(null);
 
@@ -12,36 +12,41 @@ export function AuthProvider({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    const stored = typeof window !== "undefined" ? window.localStorage.getItem("tc_user") : null;
-    if (stored && getToken()) {
-      setUser(JSON.parse(stored));
+    async function bootstrap() {
+      const { data } = await supabase.auth.getSession();
+      setUser(data?.session?.user ?? null);
+      setLoading(false);
     }
-    setLoading(false);
+
+    bootstrap();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  function persist(token, user) {
-    setToken(token);
-    window.localStorage.setItem("tc_user", JSON.stringify(user));
-    setUser(user);
-  }
-
   async function login(email, password) {
-    const data = await api.login({ email, password });
-    persist(data.token, data.user);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    setUser(data.user);
     return data.user;
   }
 
   async function register(name, email, password, tin) {
-    const payload = { name, email, password };
-    if (tin) payload.tin = tin.trim();
-    const data = await api.register(payload);
-    persist(data.token, data.user);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name, tin } },
+    });
+    if (error) throw new Error(error.message);
+    setUser(data.user);
     return data.user;
   }
 
-  function logout() {
-    setToken(null);
-    window.localStorage.removeItem("tc_user");
+  async function logout() {
+    await supabase.auth.signOut();
     setUser(null);
     router.push("/");
   }

@@ -63,12 +63,11 @@ router.post("/login", async (req, res) => {
   return res.json({ token: signToken(user), user: publicUser(user) });
 });
 
-// Google login stub: the frontend will use Firebase Auth client-side
-// and send the verified ID token here once Firebase credentials are
-// configured. For now this documents the contract.
+// Google login stub: the frontend can use Supabase Auth client-side
+// and send the verified access token here once Supabase is configured.
 router.post("/google", async (req, res) => {
   return res.status(501).json({
-    error: "Google sign-in not yet configured. Add Firebase Admin credentials in auth.js to verify the ID token and upsert the user.",
+    error: "Google sign-in not yet configured. Add Supabase auth handling here if you want a backend callback route.",
   });
 });
 

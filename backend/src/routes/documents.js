@@ -32,7 +32,11 @@ router.post("/", upload.single("file"), async (req, res) => {
   }
   if (!type) return res.status(400).json({ error: "Document 'type' is required." });
 
-  const storageUrl = await saveFile({ buffer: req.file.buffer, originalName: req.file.originalname });
+  const storageUrl = await saveFile({
+    buffer: req.file.buffer,
+    originalName: req.file.originalname,
+    mimeType: req.file.mimetype,
+  });
 
   const document = await prisma.document.create({
     data: {

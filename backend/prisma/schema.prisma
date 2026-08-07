@@ -58,7 +58,7 @@ model Document {
   user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   fileName   String
   type       DocumentType
-  storageUrl String // local path in dev, Firebase Storage URL in prod
+  storageUrl String // local path in dev, Supabase Storage URL in prod
   mimeType   String
   sizeBytes  Int
   status     DocumentStatus @default(UPLOADED)

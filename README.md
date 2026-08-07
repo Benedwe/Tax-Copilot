@@ -12,10 +12,10 @@ tax-copilot/
 
 ## What's actually implemented
 
-- **Auth**: email/password (JWT). Google sign-in is stubbed with a clear
-  TODO — wire up Firebase Admin to verify ID tokens when you're ready.
+- **Auth**: email/password using Supabase Auth. The backend verifies
+  Supabase access tokens and upserts a local user record for persistence.
 - **Document upload**: PDF/JPG/PNG, stored locally by default, with a
-  one-line swap to Firebase Storage (`STORAGE_DRIVER=firebase`).
+  one-line swap to Supabase Storage (`STORAGE_DRIVER=supabase`).
 - **OCR + AI field extraction**: runs in **mock mode** out of the box —
   no API keys needed to see the full pipeline work. Add `OPENAI_API_KEY`
   and/or `GOOGLE_VISION_API_KEY` to your `.env` to go live.
@@ -72,6 +72,11 @@ whole flow).
 4. Set the remaining env vars from `.env.example` (`JWT_SECRET`,
    `FRONTEND_ORIGIN` = your Vercel URL, and `OPENAI_API_KEY` /
    `GOOGLE_VISION_API_KEY` once you're ready to leave mock mode).
+   If you want uploads in production to use Supabase Storage, set
+   `STORAGE_DRIVER=supabase` and add `SUPABASE_URL`,
+   `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_STORAGE_BUCKET`.
+   For frontend auth, add `NEXT_PUBLIC_SUPABASE_URL` and
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` to `frontend/.env.local.example`.
 5. Railway will run `npm install` (which triggers `prisma generate` via
    `postinstall`) and then the `railway.json` start command, which runs
    pending migrations before starting the server.
