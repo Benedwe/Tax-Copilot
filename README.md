@@ -43,8 +43,9 @@ npm run dev
 ```
 
 Don't have Postgres locally? Easiest path is a free instance from
-[Railway](https://railway.app) or [Neon](https://neon.tech) — just paste
-the connection string into `DATABASE_URL`.
+[Vercel Postgres](https://vercel.com/docs/postgres), [Neon](https://neon.tech),
+or another managed provider — just paste the connection string into
+`DATABASE_URL`.
 
 ### 2. Frontend
 
@@ -62,24 +63,22 @@ whole flow).
 
 ## Deploying
 
-### Backend → Railway
+### Backend → Vercel
 
 1. Push this repo to GitHub.
-2. In Railway: **New Project → Deploy from GitHub repo**, select
-   `/backend` as the root directory.
-3. Add a **PostgreSQL** plugin to the project — Railway will inject
-   `DATABASE_URL` automatically.
-4. Set the remaining env vars from `.env.example` (`JWT_SECRET`,
-   `FRONTEND_ORIGIN` = your Vercel URL, and `OPENAI_API_KEY` /
-   `GOOGLE_VISION_API_KEY` once you're ready to leave mock mode).
-   If you want uploads in production to use Supabase Storage, set
-   `STORAGE_DRIVER=supabase` and add `SUPABASE_URL`,
-   `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_STORAGE_BUCKET`.
-   For frontend auth, add `NEXT_PUBLIC_SUPABASE_URL` and
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY` to `frontend/.env.local.example`.
-5. Railway will run `npm install` (which triggers `prisma generate` via
-   `postinstall`) and then the `railway.json` start command, which runs
-   pending migrations before starting the server.
+2. In Vercel: **New Project → Import** the repo and set `/backend` as the
+   root directory.
+3. Add the env vars from `backend/.env.example`:
+   - `DATABASE_URL`
+   - `FRONTEND_ORIGIN` = your frontend Vercel URL
+   - `OPENAI_API_KEY` / `GOOGLE_VISION_API_KEY` (optional for OCR/AI)
+   - `STORAGE_DRIVER=supabase` if you want uploads in Supabase Storage
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_STORAGE_BUCKET`
+   - `JWT_SECRET` is still used for the local JWT fallback path
+4. Vercel will detect the Node API and deploy your `/backend/api` serverless
+   handlers automatically.
 
 ### Frontend → Vercel
 
