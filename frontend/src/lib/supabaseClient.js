@@ -1,11 +1,24 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createBrowserClient } from "@/utils/supabase/client";
+import { createClient as createServerClient } from "@/utils/supabase/server";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export function createServerSupabaseClient() {
+  return import("next/headers").then(async ({ cookies }) => {
+    const cookieStore = await cookies();
+    return createServerClient(cookieStore);
+  });
+}
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    storage: typeof window !== "undefined" ? window.localStorage : undefined,
-  },
-});
+let browserClient;
+
+export function getSupabaseClient() {
+  if (typeof window === "undefined") return null;
+
+  if (!browserClient) {
+    browserClient = createBrowserClient();
+  }
+
+  return browserClient;
+}
+
+export const supabase = getSupabaseClient();
+

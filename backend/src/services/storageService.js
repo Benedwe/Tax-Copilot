@@ -4,11 +4,9 @@ import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads");
-
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
+const UPLOAD_DIR = process.env.VERCEL
+  ? "/tmp/uploads"
+  : path.join(__dirname, "..", "..", "uploads");
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
@@ -56,8 +54,13 @@ export async function saveFile({ buffer, originalName, mimeType }) {
     return publicUrlData.publicUrl;
   }
 
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+
   const safeName = `${Date.now()}-${originalName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
   const fullPath = path.join(UPLOAD_DIR, safeName);
   fs.writeFileSync(fullPath, buffer);
   return `/uploads/${safeName}`;
 }
+

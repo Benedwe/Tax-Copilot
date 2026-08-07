@@ -1,11 +1,28 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL !== undefined
+    ? process.env.NEXT_PUBLIC_API_URL
+    : typeof window !== "undefined" && window.location.hostname !== "localhost"
+    ? ""
+    : "http://localhost:4000";
+
 
 async function getToken() {
   if (typeof window === "undefined") return null;
-  const { data } = await supabase.auth.getSession();
-  return data?.session?.access_token ?? null;
+
+  const supabase = getSupabaseClient();
+  if (!supabase) return localStorage.getItem("tax_copilot_token") || null;
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) {
+      return data.session.access_token;
+    }
+  } catch (err) {
+    // Ignore supabase error
+  }
+  return localStorage.getItem("tax_copilot_token") || null;
 }
 
 async function request(path, { method = "GET", body, isForm = false, auth = true } = {}) {
@@ -33,7 +50,10 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
 }
 
 export const api = {
+  login: (email, password) => request("/api/auth/login", { method: "POST", body: { email, password }, auth: false }),
+  register: (payload) => request("/api/auth/register", { method: "POST", body: payload, auth: false }),
   quickCalculate: (payload) => request("/api/calculator", { method: "POST", body: payload, auth: false }),
+
 
   listTaxReturns: () => request("/api/tax-returns"),
   createTaxReturn: (year) => request("/api/tax-returns", { method: "POST", body: { year } }),

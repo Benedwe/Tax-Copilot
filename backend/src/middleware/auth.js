@@ -13,33 +13,42 @@ export async function requireAuth(req, res, next) {
   if (supabaseAdmin) {
     try {
       const { data, error } = await supabaseAdmin.auth.getUser(token);
-      if (error || !data?.user) {
-        throw error || new Error("Invalid Supabase token.");
+      if (!error && data?.user) {
+        const { user } = data;
+        const metadata = user.user_metadata || {};
+
+        let localUser = await prisma.user.findUnique({ where: { id: user.id } });
+        if (!localUser && user.email) {
+          localUser = await prisma.user.findUnique({ where: { email: user.email } });
+        }
+
+        if (localUser) {
+          localUser = await prisma.user.update({
+            where: { id: localUser.id },
+            data: {
+              email: user.email,
+              name: metadata.name || localUser.name || user.email,
+              tin: metadata.tin ?? localUser.tin ?? undefined,
+              authProvider: "supabase",
+            },
+          });
+        } else {
+          localUser = await prisma.user.create({
+            data: {
+              id: user.id,
+              email: user.email,
+              name: metadata.name || user.email,
+              tin: metadata.tin ?? undefined,
+              authProvider: "supabase",
+            },
+          });
+        }
+
+        req.user = localUser;
+        return next();
       }
-
-      const { user } = data;
-      const metadata = user.user_metadata || {};
-      const localUser = await prisma.user.upsert({
-        where: { id: user.id },
-        update: {
-          email: user.email,
-          name: metadata.name || user.email,
-          tin: metadata.tin ?? undefined,
-          authProvider: "supabase",
-        },
-        create: {
-          id: user.id,
-          email: user.email,
-          name: metadata.name || user.email,
-          tin: metadata.tin ?? undefined,
-          authProvider: "supabase",
-        },
-      });
-
-      req.user = localUser;
-      return next();
     } catch (err) {
-      return res.status(401).json({ error: err.message || "Invalid Supabase token." });
+      // Fallback to local JWT verification below if Supabase token check errors
     }
   }
 
@@ -51,3 +60,4 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Invalid or expired token." });
   }
 }
+
