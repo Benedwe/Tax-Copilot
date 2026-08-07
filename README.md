@@ -73,10 +73,12 @@ on one domain (`/` → frontend, `/api/*` → backend).
 2. In Vercel: **Add New → Project → Import** the repo.
 3. Leave the **root directory** as `.` (repo root).
 4. In **Build & Deployment → Framework Preset**, choose **Services**.
-5. Add environment variables (Project Settings → Environment Variables):
+5. **Before the first deploy**, add environment variables (Project Settings → Environment Variables).
+   At minimum you need `DATABASE_URL` — without it the build will succeed but
+   migrations are skipped and the API will not work at runtime.
 
    **Shared / backend**
-   - `DATABASE_URL` — Postgres connection string ([Vercel Postgres](https://vercel.com/docs/postgres), [Neon](https://neon.tech), etc.)
+   - `DATABASE_URL` — **required**. Postgres connection string ([Vercel Postgres](https://vercel.com/docs/postgres), [Neon](https://neon.tech), etc.). Enable for Production, Preview, and Development.
    - `JWT_SECRET` — long random string
    - `FRONTEND_ORIGIN` — your Vercel deployment URL (e.g. `https://tax-copilot.vercel.app`)
    - `STORAGE_DRIVER=supabase` — required on Vercel (local disk is ephemeral)
@@ -90,7 +92,8 @@ on one domain (`/` → frontend, `/api/*` → backend).
    Do **not** set `NEXT_PUBLIC_API_URL` for unified deploy — the frontend
    calls `/api` on the same origin automatically.
 
-6. Deploy. The backend build runs `prisma generate && prisma migrate deploy`.
+6. Deploy. When `DATABASE_URL` is set, the backend build runs
+   `prisma generate` and `prisma migrate deploy` automatically.
 
 ### Alternative: split deploy (two Vercel projects)
 
