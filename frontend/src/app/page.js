@@ -117,7 +117,7 @@ export default function Home() {
       </section>
 
       <footer className="mx-auto max-w-6xl px-6 py-8 text-xs text-ink-faint flex justify-between">
-        <span>Tax Copilot — an MVP, not a filed return.</span>
+        <span>© 2026 Taxcopilot</span>
         <span>TRA individual taxpayers · Tanzania</span>
       </footer>
     </main>
