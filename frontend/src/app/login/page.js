@@ -34,7 +34,6 @@ export default function LoginPage() {
       <Nav />
       <div className="mx-auto max-w-md px-6 py-16">
         <h1 className="text-2xl text-ink mb-1">Welcome back</h1>
-        <p className="text-ink-soft text-sm mb-8">Log in to pick up your return where you left off.</p>
         <ReceiptCard className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Field label="Email">

@@ -55,7 +55,6 @@ export default function RegisterPage() {
       <Nav />
       <div className="mx-auto max-w-md px-6 py-16">
         <h1 className="text-2xl text-ink mb-1">Start your return</h1>
-        <p className="text-ink-soft text-sm mb-8">Takes under a minute. Enter your required TRA TIN to begin.</p>
         <ReceiptCard className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Field label="Full name">
