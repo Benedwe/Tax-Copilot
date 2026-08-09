@@ -40,11 +40,14 @@ function mockOcr(documentType) {
       Reporting Period: July 2026
       Gross Revenue: 8,200,000
       Deductible Expenses: 2,150,000`,
-    RECEIPT: `RECEIPT
+    RECEIPT: `TRA EFD FISCAL RECEIPT / INVOICE
       Vendor: St. Joseph Charity Fund
+      Employer/Vendor TIN: 104-582-991
+      EFD Control No: 1002938475
+      Receipt No: EFD-TZ-2026-9812
       Amount: 150,000
       Date: 14/07/2026
-      Description: Donation`,
+      Description: Tax Deductible Donation`,
     OTHER: `Document text not recognized as a known template.`,
   };
 

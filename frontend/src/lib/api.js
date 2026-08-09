@@ -86,6 +86,8 @@ export const api = {
   uploadDocument: (formData) => request("/api/documents", { method: "POST", body: formData, isForm: true }),
   processDocument: (id) => request(`/api/documents/${id}/process`, { method: "POST" }),
   verifyDocument: (id) => request(`/api/documents/${id}/verify`, { method: "POST" }),
+  updateDocumentExtractions: (id, extractions) =>
+    request(`/api/documents/${id}/extractions`, { method: "PUT", body: { extractions } }),
   deleteDocument: (id) => request(`/api/documents/${id}`, { method: "DELETE" }),
 };
 

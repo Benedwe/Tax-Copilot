@@ -9,7 +9,7 @@ const FIELD_SCHEMAS = {
   NATIONAL_ID: ["fullName", "nin", "dateOfBirth"],
   BANK_STATEMENT: ["accountHolder", "statementPeriod", "closingBalance", "totalCredits", "totalDebits"],
   BUSINESS_INCOME: ["businessName", "reportingPeriod", "grossRevenue", "deductibleExpenses"],
-  RECEIPT: ["vendor", "amount", "date", "description"],
+  RECEIPT: ["vendor", "amount", "date", "description", "efdControlNumber", "receiptNumber", "isEfdCompliant"],
   OTHER: [],
 };
 
@@ -97,13 +97,19 @@ function mockExtract({ rawText, documentType }) {
         grossRevenue: grab("Gross Revenue"),
         deductibleExpenses: grab("Deductible Expenses"),
       });
-    case "RECEIPT":
+    case "RECEIPT": {
+      const efdControlNumber = grab("EFD Control No") || grab("EFD Control Number") || grab("VFD Code");
+      const receiptNumber = grab("Receipt No") || grab("Receipt Number");
       return toResults({
         vendor: grab("Vendor"),
         amount: grab("Amount"),
         date: grab("Date"),
         description: grab("Description"),
+        efdControlNumber,
+        receiptNumber,
+        isEfdCompliant: efdControlNumber ? "true" : "false",
       });
+    }
     default:
       return [];
   }

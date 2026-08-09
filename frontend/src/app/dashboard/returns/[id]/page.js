@@ -78,7 +78,15 @@ function TaxReturnContent() {
       .map((doc) => {
         const fields = Object.fromEntries((doc.extractions || []).map((e) => [e.field, e.value]));
         if (!fields.amount) return null;
-        return { documentId: doc.id, vendor: fields.vendor, amount: parseAmount(fields.amount) };
+        const efdNo = fields.efdControlNumber || fields.receiptNumber;
+        const isEfd = fields.isEfdCompliant === "true" || Boolean(efdNo);
+        return {
+          documentId: doc.id,
+          vendor: fields.vendor,
+          amount: parseAmount(fields.amount),
+          efdNo,
+          isEfd,
+        };
       })
       .filter(Boolean);
   }, [taxReturn]);
@@ -178,6 +186,17 @@ function TaxReturnContent() {
           <StatusStamp status={taxReturn.status} />
         </div>
 
+        {/* Legal & Liability Notice Banner */}
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-sm p-4 text-xs text-amber-900 space-y-1">
+          <p className="font-semibold text-sm">⚠️ Legal Disclaimer & Verification Policy</p>
+          <p>
+            Tax Copilot provides <strong>reviewed calculation estimates</strong> to assist your tax preparation. It is not tax advice and does not submit filings directly to the Tanzania Revenue Authority (TRA).
+          </p>
+          <p>
+            Please use the <strong>Side-by-Side Review</strong> tool on all uploaded documents to inspect and confirm extracted figures against your physical documents before generating your PDF return summary.
+          </p>
+        </div>
+
         {error && <p className="text-sm text-rust">{error}</p>}
 
         {/* Documents */}
@@ -206,9 +225,16 @@ function TaxReturnContent() {
               <p className="text-xs text-ink-faint mb-3">Found in your uploaded receipts:</p>
               <ul className="space-y-2">
                 {suggestedDeductions.map((s) => (
-                  <li key={s.documentId} className="flex items-center justify-between text-sm">
-                    <span className="text-ink">
+                  <li key={s.documentId} className="flex items-center justify-between text-sm flex-wrap gap-2">
+                    <span className="text-ink flex items-center gap-2">
                       {s.vendor || "Receipt"} — <span className="font-mono">{fmt(s.amount)}</span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded font-mono font-medium ${
+                          s.isEfd ? "bg-forest/10 text-forest border border-forest/20" : "bg-rust/10 text-rust border border-rust/20"
+                        }`}
+                      >
+                        {s.isEfd ? `✓ TRA EFD [${s.efdNo || "Verified"}]` : "⚠ Missing TRA EFD Control No"}
+                      </span>
                     </span>
                     <button onClick={() => acceptSuggestion(s)} className="text-forest text-xs hover:underline">
                       ✓ Add as deduction

@@ -98,6 +98,35 @@ router.post("/:id/verify", async (req, res) => {
   res.json({ document: updated });
 });
 
+// Update extracted fields manually (side-by-side verification and correction)
+router.put("/:id/extractions", async (req, res) => {
+  const document = await prisma.document.findFirst({ where: { id: req.params.id, userId: req.user.id } });
+  if (!document) return res.status(404).json({ error: "Document not found." });
+
+  const { extractions } = req.body;
+  if (!Array.isArray(extractions)) {
+    return res.status(400).json({ error: "extractions must be an array of { field, value }." });
+  }
+
+  await prisma.aiExtraction.deleteMany({ where: { documentId: document.id } });
+  await prisma.aiExtraction.createMany({
+    data: extractions.map((f) => ({
+      documentId: document.id,
+      field: f.field,
+      value: String(f.value ?? ""),
+      confidence: 1.0, // User manually reviewed and verified
+    })),
+  });
+
+  const updated = await prisma.document.update({
+    where: { id: document.id },
+    data: { status: "VERIFIED" },
+    include: { extractions: true },
+  });
+
+  res.json({ document: updated });
+});
+
 router.delete("/:id", async (req, res) => {
   const document = await prisma.document.findFirst({ where: { id: req.params.id, userId: req.user.id } });
   if (!document) return res.status(404).json({ error: "Document not found." });
