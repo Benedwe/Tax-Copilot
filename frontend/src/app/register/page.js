@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [tin, setTin] = useState("");
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +37,11 @@ export default function RegisterPage() {
     const cleanTin = tin.replace(/[\s-]/g, "");
     if (cleanTin.length !== 9) {
       setError("Compulsory TRA TIN must be exactly 9 digits (e.g. 123-456-789)");
+      return;
+    }
+
+    if (!acceptedPrivacy) {
+      setError("You must accept the Privacy Policy to create an account.");
       return;
     }
 
@@ -90,6 +96,24 @@ export default function RegisterPage() {
                 className="input tracking-wide font-mono"
               />
             </Field>
+
+            <label className="flex items-start gap-2.5 cursor-pointer pt-1 text-xs text-ink-soft">
+              <input
+                type="checkbox"
+                required
+                checked={acceptedPrivacy}
+                onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                className="mt-0.5 rounded border-paper-line accent-ink"
+              />
+              <span>
+                I have read and agree to the{" "}
+                <Link href="/privacy" target="_blank" className="text-ink font-medium underline underline-offset-2">
+                  Privacy Policy
+                </Link>{" "}
+                and TRA document processing terms.
+              </span>
+            </label>
+
             {error && (
               <div className="p-3 bg-rust/10 border border-rust/30 rounded text-xs text-rust font-medium">
                 ⚠️ {error}
@@ -97,7 +121,7 @@ export default function RegisterPage() {
             )}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !acceptedPrivacy}
               className="w-full bg-ink text-paper py-2.5 rounded-sm hover:bg-ink-soft transition-colors disabled:opacity-60 font-medium"
             >
               {loading ? "Creating account…" : "Create TRA-Compliant Account"}
