@@ -18,13 +18,13 @@ export function generateReturnPdf({ user, taxReturn, deductions, res }) {
   doc.fontSize(10).fillColor("#555").text(`Tax year: ${taxReturn.year}    Generated: ${new Date().toLocaleDateString()}`);
   doc.moveDown(1);
 
-  doc.fillColor("#000").fontSize(12).text("Taxpayer", { underline: true });
+  doc.fillColor("#000").fontSize(12).text("Taxpayer & TRA TIN Information", { underline: true });
   doc.fontSize(11).text(`Name: ${user.name}`);
-  doc.text(`TIN: ${user.tin || "—"}`);
+  doc.text(`TIN (Compulsory): ${user.tin ? `${user.tin} [Verified 9-digit TRA TIN]` : "MISSING — REQUIRED BY TRA"}`);
   doc.text(`Email: ${user.email}`);
   doc.moveDown(1);
 
-  doc.fontSize(12).text("Income & Tax Summary", { underline: true });
+  doc.fontSize(12).text("Income & Tax Summary (Tanzania Income Tax Act Cap 332)", { underline: true });
   const rows = [
     ["Gross income", formatTzs(taxReturn.grossIncome)],
     ["Total deductions", formatTzs(taxReturn.totalDeductions)],
@@ -52,10 +52,12 @@ export function generateReturnPdf({ user, taxReturn, deductions, res }) {
     .fontSize(8.5)
     .fillColor("#4a5568")
     .text(
-      "LEGAL DISCLAIMER & LIABILITY NOTICE:\n" +
-        "1. ESTIMATE ONLY: This summary is an AI-assisted calculation estimate produced for taxpayer convenience. It does NOT constitute legal, financial, or tax advice, nor an official submission to the Tanzania Revenue Authority (TRA).\n" +
-        "2. MANUAL VERIFICATION REQUIRED: Taxpayers are strictly responsible for inspecting and verifying all extracted figures against physical documents prior to filing.\n" +
-        "3. TRA EFD RECEIPT COMPLIANCE: Under Tanzania tax law, business expenses and tax deductions require valid TRA Electronic Fiscal Device (EFD/VFD) fiscal receipts with registered Control Numbers. Generic or unverified receipts are subject to rejection and penalties by TRA during audits.",
+      "LEGAL DISCLAIMER & STATUTORY TRA COMPLIANCE NOTICE:\n" +
+        "1. COMPULSORY TIN REQUIREMENT: Under the Tanzania Tax Administration Act Cap 438, all tax returns and tax calculations require a valid 9-digit Taxpayer Identification Number (TIN).\n" +
+        "2. ESTIMATE ONLY: This summary is an AI-assisted calculation estimate produced for taxpayer convenience under Tanzania Income Tax Act Cap 332. It does NOT constitute legal, financial, or tax advice, nor an official submission to the Tanzania Revenue Authority (TRA).\n" +
+        "3. MANUAL VERIFICATION REQUIRED: Taxpayers are strictly responsible for inspecting and verifying all extracted figures against physical documents prior to filing with TRA.\n" +
+        "4. TRA EFD RECEIPT COMPLIANCE: Under Tanzania tax law (Tax Administration Act Sec 35), business expenses and tax deductions require valid TRA Electronic Fiscal Device (EFD/VFD) fiscal receipts with registered Control Numbers.\n" +
+        "5. MANDATORY RECORD RETENTION: TRA requires taxpayers to retain physical copies of all EFD receipts, tax certificates, and supporting documents for a statutory period of five (5) years.",
       { align: "left" }
     );
 

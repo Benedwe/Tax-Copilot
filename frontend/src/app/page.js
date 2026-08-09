@@ -116,9 +116,14 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="mx-auto max-w-6xl px-6 py-8 text-xs text-ink-faint flex justify-between">
-        <span>© 2026 Taxcopilot</span>
-        <span>TRA individual taxpayers · Tanzania</span>
+      <footer className="mx-auto max-w-6xl px-6 py-8 text-xs text-ink-faint flex justify-between items-center">
+        <span>© 2026 Tax Copilot · TRA Individual Taxpayers</span>
+        <div className="flex items-center gap-4">
+          <Link href="/privacy" className="hover:text-ink transition-colors underline underline-offset-2">
+            Privacy Policy
+          </Link>
+          <span>Tanzania</span>
+        </div>
       </footer>
     </main>
   );

@@ -13,25 +13,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const hasValidTin = Boolean(
+    user?.tin && user.tin.replace(/\D/g, "").length === 9
+  );
+
   useEffect(() => {
     async function bootstrap() {
-      const supabase = getSupabaseClient();
-      if (!supabase) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data?.session?.user) {
-          setUser(data.session.user);
-          setLoading(false);
-          return;
-        }
-      } catch (e) {
-        // Ignore supabase errors
-      }
-
       const storedUser = localStorage.getItem("tax_copilot_user");
       if (storedUser) {
         try {
@@ -40,44 +27,27 @@ export function AuthProvider({ children }) {
           localStorage.removeItem("tax_copilot_user");
         }
       }
+
+      const token = localStorage.getItem("tax_copilot_token");
+      if (token) {
+        try {
+          const res = await api.getProfile();
+          if (res?.user) {
+            setUser(res.user);
+            localStorage.setItem("tax_copilot_user", JSON.stringify(res.user));
+          }
+        } catch (e) {
+          // Token might be expired or invalid
+        }
+      }
+
       setLoading(false);
     }
 
     bootstrap();
-
-    let listener;
-    try {
-      const supabase = getSupabaseClient();
-      if (supabase) {
-        const { data } = supabase.auth.onAuthStateChange((_, session) => {
-          if (session?.user) {
-            setUser(session.user);
-          }
-        });
-        listener = data;
-      }
-    } catch (e) {
-      // Ignore listener error
-    }
-
-    return () => listener?.subscription?.unsubscribe();
   }, []);
 
   async function login(email, password) {
-    const supabase = getSupabaseClient();
-
-    try {
-      if (supabase) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (!error && data?.user) {
-          setUser(data.user);
-          return data.user;
-        }
-      }
-    } catch (e) {
-      // Fallback to local backend login
-    }
-
     const res = await api.login(email, password);
     if (res?.token && res?.user) {
       localStorage.setItem("tax_copilot_token", res.token);
@@ -89,22 +59,9 @@ export function AuthProvider({ children }) {
   }
 
   async function register(name, email, password, tin) {
-    const supabase = getSupabaseClient();
-
-    try {
-      if (supabase) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { name, tin } },
-        });
-        if (!error && data?.user) {
-          setUser(data.user);
-          return data.user;
-        }
-      }
-    } catch (e) {
-      // Fallback to local backend register
+    const cleanTin = (tin || "").replace(/\D/g, "");
+    if (cleanTin.length !== 9) {
+      throw new Error("Compulsory TRA TIN must be a valid 9-digit number.");
     }
 
     const res = await api.register({ name, email, password, tin });
@@ -117,25 +74,29 @@ export function AuthProvider({ children }) {
     throw new Error("Registration failed.");
   }
 
-  async function logout() {
-    const supabase = getSupabaseClient();
-
-    try {
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
-    } catch (e) {
-      // Ignore
+  async function updateUserTin(tin) {
+    const res = await api.updateTin(tin);
+    if (res?.user) {
+      setUser(res.user);
+      localStorage.setItem("tax_copilot_user", JSON.stringify(res.user));
+      return res.user;
     }
+    throw new Error("Failed to update TIN.");
+  }
+
+  async function logout() {
     localStorage.removeItem("tax_copilot_token");
     localStorage.removeItem("tax_copilot_user");
     setUser(null);
     router.push("/");
   }
 
-
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider
+      value={{ user, loading, hasValidTin, login, register, updateUserTin, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
   );
 }
 

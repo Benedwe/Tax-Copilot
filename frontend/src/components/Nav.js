@@ -18,6 +18,16 @@ export default function Nav() {
           </Link>
           {user ? (
             <>
+              {user.tin ? (
+                <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs px-2.5 py-1 rounded font-mono font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  TRA TIN: {user.tin}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 border border-amber-300 text-xs px-2.5 py-1 rounded font-mono font-medium">
+                  ⚠️ TIN Required
+                </span>
+              )}
               <Link href="/dashboard" className="text-ink-soft hover:text-ink transition-colors">
                 Dashboard
               </Link>

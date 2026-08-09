@@ -11,18 +11,23 @@ import DocumentRow from "@/components/DocumentRow";
 import { api } from "@/lib/api";
 import { parseAmount } from "@/lib/documentMeta";
 
+import TinPromptModal from "@/components/TinPromptModal";
+import { useAuth } from "@/lib/AuthContext";
+
 const fmt = (n) =>
   `TZS ${Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
 export default function TaxReturnPage() {
   return (
     <RequireAuth>
+      <TinPromptModal />
       <TaxReturnContent />
     </RequireAuth>
   );
 }
 
 function TaxReturnContent() {
+  const { user } = useAuth();
   const { id } = useParams();
   const [taxReturn, setTaxReturn] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -178,8 +183,12 @@ function TaxReturnContent() {
       <div className="mx-auto max-w-4xl px-6 py-16 space-y-10">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs tracking-[0.2em] uppercase text-brass-dark font-medium mb-2">
-              {taxReturn.year} Tax Return
+            <p className="text-xs tracking-[0.2em] uppercase text-brass-dark font-medium mb-2 flex items-center gap-2">
+              <span>{taxReturn.year} Tax Return</span>
+              <span className="text-ink-faint">•</span>
+              <span className="font-mono text-ink-soft bg-paper-light border border-paper-line px-2 py-0.5 rounded">
+                TRA TIN: {user?.tin || "MISSING"}
+              </span>
             </p>
             <h1 className="text-3xl text-ink">Your filing workspace</h1>
           </div>

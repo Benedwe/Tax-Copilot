@@ -52,6 +52,8 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
 export const api = {
   login: (email, password) => request("/api/auth/login", { method: "POST", body: { email, password }, auth: false }),
   register: (payload) => request("/api/auth/register", { method: "POST", body: payload, auth: false }),
+  getProfile: () => request("/api/auth/me"),
+  updateTin: (tin) => request("/api/auth/tin", { method: "PUT", body: { tin } }),
   quickCalculate: (payload) => request("/api/calculator", { method: "POST", body: payload, auth: false }),
 
 

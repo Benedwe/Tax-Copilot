@@ -4,26 +4,37 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 
+import { requireAuth } from "../middleware/auth.js";
+
 const router = Router();
 
+export function formatTin(rawTin) {
+  const digits = String(rawTin || "").replace(/\D/g, "");
+  if (digits.length !== 9) return null;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}`;
+}
+
 const registerSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  password: z.string().min(8),
-  tin: z.string().trim().min(1).max(64).optional(),
+  name: z.string().min(1, "Full name is required"),
+  email: z.string().email("Valid email address is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  tin: z
+    .string()
+    .trim()
+    .min(1, "TRA Taxpayer Identification Number (TIN) is compulsory")
+    .refine((val) => {
+      const clean = val.replace(/[\s-]/g, "");
+      return /^\d{9}$/.test(clean);
+    }, "TIN must be a valid 9-digit TRA Taxpayer Identification Number (e.g. 123-456-789 or 123456789)"),
 });
 
 router.post("/register", async (req, res) => {
-  const body = {
-    ...req.body,
-    tin: typeof req.body?.tin === "string" ? req.body.tin.trim() || undefined : undefined,
-  };
-
-  const parsed = registerSchema.safeParse(body);
+  const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.errors[0].message });
   }
   const { name, email, password, tin } = parsed.data;
+  const formattedTin = formatTin(tin);
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -32,7 +43,7 @@ router.post("/register", async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
-    data: { name, email, passwordHash, authProvider: "password", tin },
+    data: { name, email, passwordHash, authProvider: "password", tin: formattedTin },
   });
 
   return res.status(201).json({ token: signToken(user), user: publicUser(user) });
@@ -63,6 +74,38 @@ router.post("/login", async (req, res) => {
   return res.json({ token: signToken(user), user: publicUser(user) });
 });
 
+// Fetch current user details & TIN validation status
+router.get("/me", requireAuth, async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+  if (!user) return res.status(404).json({ error: "User not found." });
+
+  return res.json({
+    user: publicUser(user),
+    hasValidTin: Boolean(user.tin && formatTin(user.tin)),
+  });
+});
+
+// Update/Add compulsory TRA TIN for current user
+router.put("/tin", requireAuth, async (req, res) => {
+  const { tin } = req.body || {};
+  const formatted = formatTin(tin);
+  if (!formatted) {
+    return res.status(400).json({
+      error: "TIN must be a valid 9-digit TRA Taxpayer Identification Number (e.g. 123-456-789 or 123456789).",
+    });
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: req.user.id },
+    data: { tin: formatted },
+  });
+
+  return res.json({
+    user: publicUser(updatedUser),
+    hasValidTin: true,
+  });
+});
+
 // Google login stub: the frontend can use Supabase Auth client-side
 // and send the verified access token here once Supabase is configured.
 router.post("/google", async (req, res) => {
@@ -83,3 +126,4 @@ function publicUser(user) {
 }
 
 export default router;
+

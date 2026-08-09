@@ -9,9 +9,12 @@ import StatusStamp from "@/components/StatusStamp";
 import { useAuth } from "@/lib/AuthContext";
 import { api } from "@/lib/api";
 
+import TinPromptModal from "@/components/TinPromptModal";
+
 export default function DashboardPage() {
   return (
     <RequireAuth>
+      <TinPromptModal />
       <DashboardContent />
     </RequireAuth>
   );
