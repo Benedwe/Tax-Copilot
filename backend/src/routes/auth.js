@@ -50,7 +50,9 @@ router.post("/register", async (req, res) => {
     tin: formattedTin,
   });
 
-  return res.status(201).json({ token: signToken(user), user: publicUser(user) });
+  const token = signToken(user);
+  setAuthCookie(res, token);
+  return res.status(201).json({ token, user: publicUser(user) });
 });
 
 const loginSchema = z.object({
@@ -75,7 +77,14 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid email or password." });
   }
 
-  return res.json({ token: signToken(user), user: publicUser(user) });
+  const token = signToken(user);
+  setAuthCookie(res, token);
+  return res.json({ token, user: publicUser(user) });
+});
+
+router.post("/logout", (req, res) => {
+  clearAuthCookie(res);
+  return res.json({ message: "Successfully logged out." });
 });
 
 // Fetch current user details & TIN validation status
@@ -116,7 +125,8 @@ router.post("/google", async (req, res) => {
 });
 
 function signToken(user) {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
+  const jwtSecret = process.env.JWT_SECRET || "tax-copilot-dev-secret-key-2026";
+  return jwt.sign({ id: user.id, email: user.email }, jwtSecret, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
   });
 }
@@ -126,5 +136,37 @@ function publicUser(user) {
   return rest;
 }
 
+function setAuthCookie(res, token) {
+  const isProd = process.env.NODE_ENV === "production";
+  const maxAge = 7 * 24 * 60 * 60 * 1000;
+  if (typeof res.cookie === "function") {
+    res.cookie("tax_copilot_token", token, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      maxAge,
+      path: "/",
+    });
+  } else {
+    const expires = new Date(Date.now() + maxAge).toUTCString();
+    res.setHeader(
+      "Set-Cookie",
+      `tax_copilot_token=${token}; Path=/; Expires=${expires}; HttpOnly; SameSite=Lax${isProd ? "; Secure" : ""}`
+    );
+  }
+}
+
+function clearAuthCookie(res) {
+  if (typeof res.clearCookie === "function") {
+    res.clearCookie("tax_copilot_token", { path: "/" });
+  } else {
+    res.setHeader(
+      "Set-Cookie",
+      "tax_copilot_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax"
+    );
+  }
+}
+
 export default router;
+
 

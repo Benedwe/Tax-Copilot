@@ -13,6 +13,8 @@ import documentRoutes from "./routes/documents.js";
 import taxReturnRoutes from "./routes/taxReturns.js";
 import calculatorRoutes from "./routes/calculator.js";
 
+import cookieParser from "cookie-parser";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
@@ -20,10 +22,19 @@ app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(
   cors({
-    origin: process.env.FRONTEND_ORIGIN?.split(",") || "*",
+    origin: (origin, callback) => {
+      const allowedOrigins = process.env.FRONTEND_ORIGIN?.split(",") || ["http://localhost:3000", "http://localhost:3001"];
+      if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true,
   })
 );
+
+app.use(cookieParser());
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -44,7 +55,8 @@ app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(express.json({ limit: "5mb" }));
 
 
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads"), { maxAge: "1d" }));
+
 
 app.get("/health", async (req, res) => {
   let dbStatus = "ok";

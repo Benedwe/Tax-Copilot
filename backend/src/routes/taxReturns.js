@@ -14,13 +14,16 @@ import { requireAuth } from "../middleware/auth.js";
 import { summarizeReturn } from "../services/taxEngine.js";
 import { generateReturnPdf } from "../services/pdfService.js";
 import { DEDUCTION_CATEGORIES } from "../config/taxBrackets.js";
+import { routeCache } from "../lib/cache.js";
 
 const router = Router();
 router.use(requireAuth);
 
-router.get("/deduction-categories", (req, res) => {
+router.get("/deduction-categories", routeCache(3600), (req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
   res.json({ categories: DEDUCTION_CATEGORIES });
 });
+
 
 router.get("/", async (req, res) => {
   const taxReturns = await findTaxReturnsByUserId(req.user.id);

@@ -8,6 +8,12 @@ const API_URL =
     : "http://localhost:4000";
 
 
+const clientCache = new Map();
+
+export function clearApiCache() {
+  clientCache.clear();
+}
+
 async function getToken() {
   if (typeof window === "undefined") return null;
 
@@ -25,7 +31,20 @@ async function getToken() {
   return localStorage.getItem("tax_copilot_token") || null;
 }
 
-async function request(path, { method = "GET", body, isForm = false, auth = true } = {}) {
+async function request(path, { method = "GET", body, isForm = false, auth = true, useCache = false, cacheTtlMs = 60000 } = {}) {
+  // Clear cache on state-changing requests
+  if (method !== "GET") {
+    clearApiCache();
+  }
+
+  // Check client-side cache for GET requests if requested
+  if (method === "GET" && useCache) {
+    const cached = clientCache.get(path);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+  }
+
   const headers = {};
   if (!isForm) headers["Content-Type"] = "application/json";
   if (auth) {
@@ -36,6 +55,7 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
   const res = await fetch(`${API_URL}${path}`, {
     method,
     headers,
+    credentials: "include",
     body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
   });
 
@@ -62,21 +82,26 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
     }
     throw new Error(message);
   }
+
+  if (method === "GET" && useCache && data) {
+    clientCache.set(path, { data, expiresAt: Date.now() + cacheTtlMs });
+  }
+
   return data;
 }
 
 export const api = {
   login: (email, password) => request("/api/auth/login", { method: "POST", body: { email, password }, auth: false }),
   register: (payload) => request("/api/auth/register", { method: "POST", body: payload, auth: false }),
-  getProfile: () => request("/api/auth/me"),
+  logout: () => request("/api/auth/logout", { method: "POST", auth: false }),
+  getProfile: () => request("/api/auth/me", { useCache: true, cacheTtlMs: 10000 }),
   updateTin: (tin) => request("/api/auth/tin", { method: "PUT", body: { tin } }),
   quickCalculate: (payload) => request("/api/calculator", { method: "POST", body: payload, auth: false }),
 
-
-  listTaxReturns: () => request("/api/tax-returns"),
+  listTaxReturns: () => request("/api/tax-returns", { useCache: true, cacheTtlMs: 15000 }),
   createTaxReturn: (year) => request("/api/tax-returns", { method: "POST", body: { year } }),
-  getTaxReturn: (id) => request(`/api/tax-returns/${id}`),
-  deductionCategories: () => request("/api/tax-returns/deduction-categories"),
+  getTaxReturn: (id) => request(`/api/tax-returns/${id}`, { useCache: true, cacheTtlMs: 15000 }),
+  deductionCategories: () => request("/api/tax-returns/deduction-categories", { useCache: true, cacheTtlMs: 3600000 }),
   addDeduction: (id, payload) => request(`/api/tax-returns/${id}/deductions`, { method: "POST", body: payload }),
   removeDeduction: (id, deductionId) =>
     request(`/api/tax-returns/${id}/deductions/${deductionId}`, { method: "DELETE" }),
@@ -85,8 +110,10 @@ export const api = {
   pdfUrl: (id) => `${API_URL}/api/tax-returns/${id}/pdf`,
   downloadPdf: async (id, filename) => {
     const token = await getToken();
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     const res = await fetch(`${API_URL}/api/tax-returns/${id}/pdf`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers,
+      credentials: "include",
     });
     if (!res.ok) throw new Error("Could not generate PDF.");
     const blob = await res.blob();
@@ -100,13 +127,15 @@ export const api = {
     window.URL.revokeObjectURL(url);
   },
 
-  listDocuments: (taxReturnId) => request(`/api/documents${taxReturnId ? `?taxReturnId=${taxReturnId}` : ""}`),
+  listDocuments: (taxReturnId) => request(`/api/documents${taxReturnId ? `?taxReturnId=${taxReturnId}` : ""}`, { useCache: true, cacheTtlMs: 10000 }),
   uploadDocument: (formData) => request("/api/documents", { method: "POST", body: formData, isForm: true }),
   processDocument: (id) => request(`/api/documents/${id}/process`, { method: "POST" }),
   verifyDocument: (id) => request(`/api/documents/${id}/verify`, { method: "POST" }),
   updateDocumentExtractions: (id, extractions) =>
     request(`/api/documents/${id}/extractions`, { method: "PUT", body: { extractions } }),
   deleteDocument: (id) => request(`/api/documents/${id}`, { method: "DELETE" }),
+  clearCache: clearApiCache,
 };
 
 export { getToken, API_URL };
+

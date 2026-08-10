@@ -85,11 +85,18 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    try {
+      await api.logout();
+    } catch (e) {
+      // Ignore network errors during logout
+    }
+    api.clearCache();
     localStorage.removeItem("tax_copilot_token");
     localStorage.removeItem("tax_copilot_user");
     setUser(null);
     router.push("/");
   }
+
 
   return (
     <AuthContext.Provider
