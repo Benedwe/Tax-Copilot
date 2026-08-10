@@ -1,14 +1,31 @@
 /**
- * In-Memory TTL Cache for Backend API Responses and Queries
+ * Bounded High-Performance In-Memory Cache with LRU Eviction & Periodic Pruning
  */
 
 class MemoryCache {
-  constructor() {
+  constructor(maxSize = 2000) {
     this.store = new Map();
+    this.maxSize = maxSize;
+
+    // Periodically prune expired items every 60 seconds
+    const interval = setInterval(() => this.pruneExpired(), 60000);
+    if (interval.unref) interval.unref();
   }
 
   set(key, value, ttlMs = 60000) {
     const expiresAt = Date.now() + ttlMs;
+
+    // If key already exists, delete it first so insertion refreshes its insertion order (LRU)
+    if (this.store.has(key)) {
+      this.store.delete(key);
+    } else if (this.store.size >= this.maxSize) {
+      // Evict oldest item (first key in Map)
+      const oldestKey = this.store.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.store.delete(oldestKey);
+      }
+    }
+
     this.store.set(key, { value, expiresAt });
   }
 
@@ -20,6 +37,10 @@ class MemoryCache {
       this.store.delete(key);
       return null;
     }
+
+    // Refresh position for LRU
+    this.store.delete(key);
+    this.store.set(key, item);
 
     return item.value;
   }
@@ -36,12 +57,26 @@ class MemoryCache {
     }
   }
 
+  pruneExpired() {
+    const now = Date.now();
+    for (const [key, item] of this.store.entries()) {
+      if (now > item.expiresAt) {
+        this.store.delete(key);
+      }
+    }
+  }
+
   clear() {
     this.store.clear();
   }
 }
 
 export const memoryCache = new MemoryCache();
+
+export function invalidateUserCache(userId) {
+  if (!userId) return;
+  memoryCache.deleteByPrefix(`${userId}:`);
+}
 
 /**
  * Express middleware to cache JSON responses for specified TTL in seconds.
@@ -77,3 +112,4 @@ export function routeCache(ttlSeconds = 60) {
     next();
   };
 }
+

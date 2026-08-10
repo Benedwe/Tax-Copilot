@@ -14,7 +14,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { summarizeReturn } from "../services/taxEngine.js";
 import { generateReturnPdf } from "../services/pdfService.js";
 import { DEDUCTION_CATEGORIES } from "../config/taxBrackets.js";
-import { routeCache } from "../lib/cache.js";
+import { routeCache, invalidateUserCache } from "../lib/cache.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -25,12 +25,13 @@ router.get("/deduction-categories", routeCache(3600), (req, res) => {
 });
 
 
-router.get("/", async (req, res) => {
+router.get("/", routeCache(60), async (req, res) => {
   const taxReturns = await findTaxReturnsByUserId(req.user.id);
   res.json({ taxReturns });
 });
 
 router.post("/", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const year = Number(req.body.year) || new Date().getFullYear();
   const existing = await findTaxReturnByYear(req.user.id, year);
   if (existing) return res.json({ taxReturn: existing });
@@ -43,7 +44,7 @@ router.post("/", async (req, res) => {
   res.status(201).json({ taxReturn });
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", routeCache(60), async (req, res) => {
   const taxReturn = await findTaxReturnById(req.params.id, req.user.id);
   if (!taxReturn) return res.status(404).json({ error: "Tax return not found." });
   res.json({ taxReturn });
@@ -57,6 +58,7 @@ const deductionSchema = z.object({
 });
 
 router.post("/:id/deductions", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const taxReturn = await findTaxReturnById(req.params.id, req.user.id);
   if (!taxReturn) return res.status(404).json({ error: "Tax return not found." });
 
@@ -71,6 +73,7 @@ router.post("/:id/deductions", async (req, res) => {
 });
 
 router.delete("/:id/deductions/:deductionId", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const taxReturn = await findTaxReturnById(req.params.id, req.user.id);
   if (!taxReturn) return res.status(404).json({ error: "Tax return not found." });
   await deleteDeduction(req.params.deductionId);
@@ -84,6 +87,7 @@ const recalcSchema = z.object({
 });
 
 router.post("/:id/recalculate", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const taxReturn = await findTaxReturnById(req.params.id, req.user.id);
   if (!taxReturn) return res.status(404).json({ error: "Tax return not found." });
 
@@ -111,6 +115,7 @@ router.post("/:id/recalculate", async (req, res) => {
 });
 
 router.post("/:id/mark-reviewed", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const taxReturn = await findTaxReturnById(req.params.id, req.user.id);
   if (!taxReturn) return res.status(404).json({ error: "Tax return not found." });
   const updated = await updateTaxReturn(taxReturn.id, { status: "REVIEWED" });
@@ -118,6 +123,7 @@ router.post("/:id/mark-reviewed", async (req, res) => {
 });
 
 router.get("/:id/pdf", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const taxReturn = await findTaxReturnById(req.params.id, req.user.id);
   if (!taxReturn) return res.status(404).json({ error: "Tax return not found." });
 
@@ -128,3 +134,4 @@ router.get("/:id/pdf", async (req, res) => {
 });
 
 export default router;
+

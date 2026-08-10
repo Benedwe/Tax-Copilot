@@ -68,6 +68,9 @@ model Document {
   updatedAt  DateTime       @updatedAt
 
   extractions AiExtraction[]
+
+  @@index([userId])
+  @@index([taxReturnId])
 }
 
 model AiExtraction {
@@ -78,6 +81,8 @@ model AiExtraction {
   value      String
   confidence Float // 0.0 - 1.0
   createdAt  DateTime @default(now())
+
+  @@index([documentId])
 }
 
 model TaxReturn {
@@ -99,6 +104,9 @@ model TaxReturn {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, year])
 }
 
 model Deduction {
@@ -110,4 +118,7 @@ model Deduction {
   amount      Decimal   @db.Decimal(14, 2)
   sourceDocumentId String?
   createdAt   DateTime  @default(now())
+
+  @@index([taxReturnId])
 }
+

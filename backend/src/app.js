@@ -6,6 +6,7 @@ import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
 import rateLimit from "express-rate-limit";
+import compression from "compression";
 
 import { prisma } from "./lib/prisma.js";
 import authRoutes from "./routes/auth.js";
@@ -18,7 +19,9 @@ import cookieParser from "cookie-parser";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
+app.use(compression());
 app.set("trust proxy", 1);
+
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(
   cors({

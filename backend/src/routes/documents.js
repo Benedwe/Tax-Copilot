@@ -12,6 +12,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { saveFile } from "../services/storageService.js";
 import { runOcr } from "../services/ocrService.js";
 import { extractFields } from "../services/aiExtractionService.js";
+import { routeCache, invalidateUserCache } from "../lib/cache.js";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
@@ -21,13 +22,14 @@ const ALLOWED_MIME = ["application/pdf", "image/jpeg", "image/png"];
 router.use(requireAuth);
 
 // List the current user's documents (optionally filtered by taxReturnId)
-router.get("/", async (req, res) => {
+router.get("/", routeCache(60), async (req, res) => {
   const documents = await findDocuments(req.user.id, req.query.taxReturnId);
   res.json({ documents });
 });
 
 // Upload a document
 router.post("/", upload.single("file"), async (req, res) => {
+  invalidateUserCache(req.user.id);
   const { type, taxReturnId } = req.body;
   if (!req.file) return res.status(400).json({ error: "No file provided (field name must be 'file')." });
   if (!ALLOWED_MIME.includes(req.file.mimetype)) {
@@ -57,6 +59,7 @@ router.post("/", upload.single("file"), async (req, res) => {
 
 // Run OCR + AI field extraction on a document
 router.post("/:id/process", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const document = await findDocumentById(req.params.id, req.user.id);
   if (!document) return res.status(404).json({ error: "Document not found." });
 
@@ -86,6 +89,7 @@ router.post("/:id/process", async (req, res) => {
 
 // User confirms extracted fields are correct
 router.post("/:id/verify", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const document = await findDocumentById(req.params.id, req.user.id);
   if (!document) return res.status(404).json({ error: "Document not found." });
 
@@ -95,6 +99,7 @@ router.post("/:id/verify", async (req, res) => {
 
 // Update extracted fields manually (side-by-side verification and correction)
 router.put("/:id/extractions", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const document = await findDocumentById(req.params.id, req.user.id);
   if (!document) return res.status(404).json({ error: "Document not found." });
 
@@ -110,6 +115,7 @@ router.put("/:id/extractions", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
+  invalidateUserCache(req.user.id);
   const document = await findDocumentById(req.params.id, req.user.id);
   if (!document) return res.status(404).json({ error: "Document not found." });
   await deleteDocument(document.id);
@@ -117,3 +123,4 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
+
