@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { supabaseAdmin } from "../lib/supabaseClient.js";
-import { prisma } from "../lib/prisma.js";
+import { findUserById, findUserByEmail, createUser, updateUser } from "../lib/db.js";
 
 export async function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
@@ -17,30 +17,24 @@ export async function requireAuth(req, res, next) {
         const { user } = data;
         const metadata = user.user_metadata || {};
 
-        let localUser = await prisma.user.findUnique({ where: { id: user.id } });
+        let localUser = await findUserById(user.id);
         if (!localUser && user.email) {
-          localUser = await prisma.user.findUnique({ where: { email: user.email } });
+          localUser = await findUserByEmail(user.email);
         }
 
         if (localUser) {
-          localUser = await prisma.user.update({
-            where: { id: localUser.id },
-            data: {
-              email: user.email,
-              name: metadata.name || localUser.name || user.email,
-              tin: metadata.tin ?? localUser.tin ?? undefined,
-              authProvider: "supabase",
-            },
+          localUser = await updateUser(localUser.id, {
+            email: user.email,
+            name: metadata.name || localUser.name || user.email,
+            tin: metadata.tin ?? localUser.tin ?? undefined,
+            authProvider: "supabase",
           });
         } else {
-          localUser = await prisma.user.create({
-            data: {
-              id: user.id,
-              email: user.email,
-              name: metadata.name || user.email,
-              tin: metadata.tin ?? undefined,
-              authProvider: "supabase",
-            },
+          localUser = await createUser({
+            email: user.email,
+            name: metadata.name || user.email,
+            tin: metadata.tin ?? undefined,
+            authProvider: "supabase",
           });
         }
 

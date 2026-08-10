@@ -9,15 +9,33 @@ const memoryStore = {
   deductions: new Map(),
 };
 
+let dbDisabled = false;
+if (
+  (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") &&
+  (!process.env.DATABASE_URL ||
+    process.env.DATABASE_URL.includes("localhost") ||
+    process.env.DATABASE_URL.includes("127.0.0.1"))
+) {
+  dbDisabled = true;
+  console.warn("⚠ Running in production/Vercel with local DATABASE_URL — using in-memory store.");
+}
+
 function generateId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
 // --- USER OPERATIONS ---
 export async function findUserByEmail(email) {
+  if (dbDisabled) {
+    for (const u of memoryStore.users.values()) {
+      if (u.email === email) return u;
+    }
+    return null;
+  }
   try {
     return await prisma.user.findUnique({ where: { email } });
   } catch (err) {
+    dbDisabled = true;
     for (const u of memoryStore.users.values()) {
       if (u.email === email) return u;
     }
@@ -26,17 +44,35 @@ export async function findUserByEmail(email) {
 }
 
 export async function findUserById(id) {
+  if (dbDisabled) return memoryStore.users.get(id) || null;
   try {
     return await prisma.user.findUnique({ where: { id } });
   } catch (err) {
+    dbDisabled = true;
     return memoryStore.users.get(id) || null;
   }
 }
 
 export async function createUser(data) {
+  if (dbDisabled) {
+    const user = {
+      id: generateId(),
+      name: data.name,
+      email: data.email,
+      passwordHash: data.passwordHash || null,
+      authProvider: data.authProvider || "password",
+      tin: data.tin || null,
+      country: data.country || "TZ",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    memoryStore.users.set(user.id, user);
+    return user;
+  }
   try {
     return await prisma.user.create({ data });
   } catch (err) {
+    dbDisabled = true;
     const user = {
       id: generateId(),
       name: data.name,
