@@ -64,7 +64,7 @@ export default function RegisterPage() {
         <ReceiptCard className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Field label="Full name">
-              <input required value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="e.g. Jane Doe" />
+              <input required value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="e.g. Jane Joel Binemungu" />
             </Field>
             <Field label="Email">
               <input
