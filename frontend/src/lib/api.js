@@ -40,10 +40,26 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
   });
 
   const contentType = res.headers.get("content-type") || "";
-  const data = contentType.includes("application/json") ? await res.json() : null;
+  let data = null;
+  if (contentType.includes("application/json")) {
+    try {
+      data = await res.json();
+    } catch (err) {
+      // Non-JSON response
+    }
+  }
 
   if (!res.ok) {
-    const message = data?.error || `Request failed (${res.status})`;
+    let message = data?.error;
+    if (!message) {
+      if (res.status === 504) {
+        message = "Server gateway timeout (504). Please verify that the database server and API backend are running.";
+      } else if (res.status === 502 || res.status === 503) {
+        message = `Service temporarily unavailable (${res.status}). Please check system status and try again.`;
+      } else {
+        message = `Request failed (${res.status})`;
+      }
+    }
     throw new Error(message);
   }
   return data;
