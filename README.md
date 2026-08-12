@@ -44,10 +44,14 @@ npm run prisma:migrate
 npm run dev              
 ```
 
-Don't have Postgres locally? Easiest path is a free instance from
-[Vercel Postgres](https://vercel.com/docs/postgres), [Neon](https://neon.tech),
-or another managed provider — just paste the connection string into
-`DATABASE_URL`.
+`npm run dev` will try to start the local Postgres container from
+[`backend/docker-compose.yml`](backend/docker-compose.yml) if the
+database is not already reachable on `DATABASE_URL`.
+
+Don't have Docker or prefer a managed database? Use a hosted Postgres
+instance from [Vercel Postgres](https://vercel.com/docs/postgres),
+[Neon](https://neon.tech), or another provider — just paste the
+connection string into `DATABASE_URL`.
 
 ### 2. Frontend
 
@@ -80,7 +84,8 @@ on one domain (`/` → frontend, `/api/*` → backend).
    migrations are skipped and the API will not work at runtime.
 
    **Shared / backend**
-   - `DATABASE_URL` — **required**. Postgres connection string ([Vercel Postgres](https://vercel.com/docs/postgres), [Neon](https://neon.tech), etc.). Enable for Production, Preview, and Development.
+   - `DATABASE_URL` — **required**. Postgres connection string ([Vercel Postgres](https://vercel.com/docs/postgres), [Neon](https://neon.tech), Supabase, etc.). Enable for Production, Preview, and Development.
+   - `DIRECT_URL` — recommended for Supabase and other pooled/serverless setups. Use the direct Postgres connection string here so Prisma migrations can run reliably during deploys.
    - `JWT_SECRET` — long random string
    - `FRONTEND_ORIGIN` — your Vercel deployment URL (e.g. `https://tax-copilot.vercel.app`)
    - `STORAGE_DRIVER=supabase` — required on Vercel (local disk is ephemeral)
@@ -118,6 +123,9 @@ Use this if you prefer separate scaling or domains for frontend and backend.
 - The auth API requires a reachable PostgreSQL database; if the database
   is down, signup/login now returns a clear 503 instead of silently
   creating an ephemeral in-memory account.
+- If you use Supabase in production, set `DATABASE_URL` to the Supabase
+  pooled connection string and `DIRECT_URL` to the direct connection
+  string. This avoids Prisma migration/runtime mismatches.
 - OCR/AI extraction is mock-mode until you add API keys; real-mode
   OpenAI extraction in `aiExtractionService.js` is wired up but untested
   against actual scanned documents — expect to tune the prompt.

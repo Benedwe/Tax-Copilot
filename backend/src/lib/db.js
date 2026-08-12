@@ -9,17 +9,6 @@ const memoryStore = {
   deductions: new Map(),
 };
 
-let dbDisabled = false;
-if (
-  (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") &&
-  (!process.env.DATABASE_URL ||
-    process.env.DATABASE_URL.includes("localhost") ||
-    process.env.DATABASE_URL.includes("127.0.0.1"))
-) {
-  dbDisabled = true;
-  console.warn("⚠ Running in production/Vercel with local DATABASE_URL — using in-memory store.");
-}
-
 function generateId() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
