@@ -15,8 +15,11 @@ export function formatTin(rawTin) {
 }
 
 const registerSchema = z.object({
-  name: z.string().min(1, "Full name is required"),
-  email: z.string().email("Valid email address is required"),
+  name: z.string().trim().min(1, "Full name is required"),
+  email: z.preprocess(
+    (val) => (typeof val === "string" ? val.trim().toLowerCase() : val),
+    z.string().email("Valid email address is required")
+  ),
   password: z.string().min(8, "Password must be at least 8 characters"),
   tin: z
     .string()
@@ -34,17 +37,18 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ error: parsed.error.errors[0].message });
   }
   const { name, email, password, tin } = parsed.data;
+  const cleanEmail = email;
   const formattedTin = formatTin(tin);
 
-  const existing = await findUserByEmail(email);
+  const existing = await findUserByEmail(cleanEmail);
   if (existing) {
     return res.status(409).json({ error: "An account with that email already exists." });
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await createUser({
-    name,
-    email,
+    name: name.trim(),
+    email: cleanEmail,
     passwordHash,
     authProvider: "password",
     tin: formattedTin,
@@ -56,7 +60,10 @@ router.post("/register", async (req, res) => {
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.preprocess(
+    (val) => (typeof val === "string" ? val.trim().toLowerCase() : val),
+    z.string().email("Valid email address is required")
+  ),
   password: z.string().min(1),
 });
 
@@ -66,8 +73,9 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: parsed.error.errors[0].message });
   }
   const { email, password } = parsed.data;
+  const cleanEmail = email.toLowerCase().trim();
 
-  const user = await findUserByEmail(email);
+  const user = await findUserByEmail(cleanEmail);
   if (!user || !user.passwordHash) {
     return res.status(401).json({ error: "Invalid email or password." });
   }
@@ -139,11 +147,12 @@ function publicUser(user) {
 function setAuthCookie(res, token) {
   const isProd = process.env.NODE_ENV === "production";
   const maxAge = 7 * 24 * 60 * 60 * 1000;
+  const sameSite = isProd ? "none" : "lax";
   if (typeof res.cookie === "function") {
     res.cookie("tax_copilot_token", token, {
       httpOnly: true,
       secure: isProd,
-      sameSite: "lax",
+      sameSite,
       maxAge,
       path: "/",
     });
@@ -151,18 +160,19 @@ function setAuthCookie(res, token) {
     const expires = new Date(Date.now() + maxAge).toUTCString();
     res.setHeader(
       "Set-Cookie",
-      `tax_copilot_token=${token}; Path=/; Expires=${expires}; HttpOnly; SameSite=Lax${isProd ? "; Secure" : ""}`
+      `tax_copilot_token=${token}; Path=/; Expires=${expires}; HttpOnly; SameSite=${isProd ? "None" : "Lax"}${isProd ? "; Secure" : ""}`
     );
   }
 }
 
 function clearAuthCookie(res) {
+  const isProd = process.env.NODE_ENV === "production";
   if (typeof res.clearCookie === "function") {
-    res.clearCookie("tax_copilot_token", { path: "/" });
+    res.clearCookie("tax_copilot_token", { path: "/", secure: isProd, sameSite: isProd ? "none" : "lax" });
   } else {
     res.setHeader(
       "Set-Cookie",
-      "tax_copilot_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax"
+      `tax_copilot_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=${isProd ? "None" : "Lax"}${isProd ? "; Secure" : ""}`
     );
   }
 }

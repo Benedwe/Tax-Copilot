@@ -2,6 +2,7 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import ReceiptCard from "@/components/ReceiptCard";
 import SealHero from "@/components/SealHero";
+import FaqSection from "@/components/FaqSection";
 
 const STEPS = [
   {
@@ -103,6 +104,9 @@ export default function Home() {
         </ReceiptCard>
       </section>
 
+      {/* FAQ Section */}
+      <FaqSection />
+
       {/* CTA footer band */}
       <section className="bg-ink text-paper">
         <div className="mx-auto max-w-6xl px-6 py-16 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -121,6 +125,9 @@ export default function Home() {
         <div className="flex items-center gap-4">
           <Link href="/privacy" className="hover:text-ink transition-colors underline underline-offset-2">
             Privacy Policy
+          </Link>
+          <Link href="/faq" className="hover:text-ink transition-colors underline underline-offset-2">
+            FAQs
           </Link>
           <span>Tanzania</span>
         </div>

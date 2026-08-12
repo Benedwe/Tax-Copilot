@@ -20,35 +20,60 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     async function bootstrap() {
       const storedUser = localStorage.getItem("tax_copilot_user");
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser));
-        } catch (e) {
-          localStorage.removeItem("tax_copilot_user");
-        }
-      }
-
       const token = localStorage.getItem("tax_copilot_token");
+
       if (token) {
+        if (storedUser) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (e) {
+            localStorage.removeItem("tax_copilot_user");
+          }
+        }
         try {
           const res = await api.getProfile();
           if (res?.user) {
             setUser(res.user);
             localStorage.setItem("tax_copilot_user", JSON.stringify(res.user));
+          } else {
+            // Invalid session response
+            localStorage.removeItem("tax_copilot_token");
+            localStorage.removeItem("tax_copilot_user");
+            setUser(null);
           }
         } catch (e) {
-          // Token might be expired or invalid
+          // Token expired or server rejected
+          localStorage.removeItem("tax_copilot_token");
+          localStorage.removeItem("tax_copilot_user");
+          setUser(null);
         }
+      } else {
+        localStorage.removeItem("tax_copilot_user");
+        setUser(null);
       }
 
       setLoading(false);
     }
 
     bootstrap();
+
+    function handleUnauthorized() {
+      api.clearCache();
+      localStorage.removeItem("tax_copilot_token");
+      localStorage.removeItem("tax_copilot_user");
+      setUser(null);
+    }
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
   }, []);
 
   async function login(email, password) {
-    const res = await api.login(email, password);
+    api.clearCache();
+    const cleanEmail = (email || "").toLowerCase().trim();
+    const res = await api.login(cleanEmail, password);
     if (res?.token && res?.user) {
       localStorage.setItem("tax_copilot_token", res.token);
       localStorage.setItem("tax_copilot_user", JSON.stringify(res.user));
@@ -58,13 +83,20 @@ export function AuthProvider({ children }) {
     throw new Error("Login failed.");
   }
 
+  async function demoLogin() {
+    return login("demo@taxcopilot.tz", "password123");
+  }
+
   async function register(name, email, password, tin) {
+    api.clearCache();
+    const cleanEmail = (email || "").toLowerCase().trim();
+    const cleanName = (name || "").trim();
     const cleanTin = (tin || "").replace(/\D/g, "");
     if (cleanTin.length !== 9) {
       throw new Error("Compulsory TRA TIN must be a valid 9-digit number.");
     }
 
-    const res = await api.register({ name, email, password, tin });
+    const res = await api.register({ name: cleanName, email: cleanEmail, password, tin });
     if (res?.token && res?.user) {
       localStorage.setItem("tax_copilot_token", res.token);
       localStorage.setItem("tax_copilot_user", JSON.stringify(res.user));
@@ -97,10 +129,9 @@ export function AuthProvider({ children }) {
     router.push("/");
   }
 
-
   return (
     <AuthContext.Provider
-      value={{ user, loading, hasValidTin, login, register, updateUserTin, logout }}
+      value={{ user, loading, hasValidTin, login, demoLogin, register, updateUserTin, logout }}
     >
       {children}
     </AuthContext.Provider>

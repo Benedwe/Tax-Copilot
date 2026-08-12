@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import { prisma } from "./prisma.js";
 
 // In-memory fallback state for deployments where PostgreSQL is offline/unreachable
@@ -8,6 +9,39 @@ const memoryStore = {
   taxReturns: new Map(),
   deductions: new Map(),
 };
+
+// Seed demo taxpayer account into memoryStore
+const demoPasswordHash = bcrypt.hashSync("password123", 10);
+const demoUserId = "demo_user_001";
+const demoUser = {
+  id: demoUserId,
+  name: "Demo Taxpayer",
+  email: "demo@taxcopilot.tz",
+  passwordHash: demoPasswordHash,
+  authProvider: "password",
+  tin: "123-456-789",
+  country: "TZ",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+memoryStore.users.set(demoUserId, demoUser);
+
+// Seed initial draft tax return for demo user
+const demoTaxReturnId = "demo_return_2025";
+memoryStore.taxReturns.set(demoTaxReturnId, {
+  id: demoTaxReturnId,
+  userId: demoUserId,
+  year: 2025,
+  status: "DRAFT",
+  grossIncome: 18000000,
+  taxableIncome: 15000000,
+  totalDeductions: 3000000,
+  taxDue: 2250000,
+  taxPaid: 1500000,
+  balance: 750000,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
 
 let dbDisabled = false;
 if (
@@ -25,19 +59,28 @@ function generateId() {
 }
 
 // --- USER OPERATIONS ---
-export async function findUserByEmail(email) {
+export async function findUserByEmail(rawEmail) {
+  const email = String(rawEmail || "").toLowerCase().trim();
+  if (!email) return null;
+
   if (dbDisabled) {
     for (const u of memoryStore.users.values()) {
-      if (u.email === email) return u;
+      if (u.email.toLowerCase() === email) return u;
     }
     return null;
   }
   try {
-    return await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user) return user;
+    // Fallback lookup in memory store for demo user or transient memory records
+    for (const u of memoryStore.users.values()) {
+      if (u.email.toLowerCase() === email) return u;
+    }
+    return null;
   } catch (err) {
     dbDisabled = true;
     for (const u of memoryStore.users.values()) {
-      if (u.email === email) return u;
+      if (u.email.toLowerCase() === email) return u;
     }
     return null;
   }
@@ -46,7 +89,9 @@ export async function findUserByEmail(email) {
 export async function findUserById(id) {
   if (dbDisabled) return memoryStore.users.get(id) || null;
   try {
-    return await prisma.user.findUnique({ where: { id } });
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (user) return user;
+    return memoryStore.users.get(id) || null;
   } catch (err) {
     dbDisabled = true;
     return memoryStore.users.get(id) || null;

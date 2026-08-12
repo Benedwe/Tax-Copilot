@@ -17,18 +17,21 @@ export function clearApiCache() {
 async function getToken() {
   if (typeof window === "undefined") return null;
 
-  const supabase = getSupabaseClient();
-  if (!supabase) return localStorage.getItem("tax_copilot_token") || null;
+  const localToken = localStorage.getItem("tax_copilot_token");
+  if (localToken) return localToken;
 
-  try {
-    const { data } = await supabase.auth.getSession();
-    if (data?.session?.access_token) {
-      return data.session.access_token;
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.access_token) {
+        return data.session.access_token;
+      }
+    } catch (err) {
+      // Ignore supabase error
     }
-  } catch (err) {
-    // Ignore supabase error
   }
-  return localStorage.getItem("tax_copilot_token") || null;
+  return null;
 }
 
 async function request(path, { method = "GET", body, isForm = false, auth = true, useCache = false, cacheTtlMs = 60000 } = {}) {
@@ -70,6 +73,9 @@ async function request(path, { method = "GET", body, isForm = false, auth = true
   }
 
   if (!res.ok) {
+    if (res.status === 401 && auth && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+    }
     let message = data?.error;
     if (!message) {
       if (res.status === 504) {
