@@ -12,8 +12,10 @@ tax-copilot/
 
 ## What's actually implemented
 
-- **Auth**: email/password using Supabase Auth. The backend verifies
-  Supabase access tokens and upserts a local user record for persistence.
+- **Auth**: email/password accounts backed by PostgreSQL via the
+  backend auth API. The backend verifies session tokens and keeps a
+  local user record for persistence, so signup and login behave
+  consistently across restarts and deployments.
 - **Document upload**: PDF/JPG/PNG, stored locally by default, with a
   one-line swap to Supabase Storage (`STORAGE_DRIVER=supabase`).
 - **OCR + AI field extraction**: runs in **mock mode** out of the box —
@@ -113,6 +115,9 @@ Use this if you prefer separate scaling or domains for frontend and backend.
 
 - JWT is stored in `localStorage` on the frontend — fine for an MVP demo,
   but move to an httpOnly cookie before handling real tax documents.
+- The auth API requires a reachable PostgreSQL database; if the database
+  is down, signup/login now returns a clear 503 instead of silently
+  creating an ephemeral in-memory account.
 - OCR/AI extraction is mock-mode until you add API keys; real-mode
   OpenAI extraction in `aiExtractionService.js` is wired up but untested
   against actual scanned documents — expect to tune the prompt.

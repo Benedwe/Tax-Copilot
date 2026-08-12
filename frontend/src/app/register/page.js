@@ -31,16 +31,6 @@ export default function RegisterPage() {
     }
   }
 
-  function handleFillDemo() {
-    const randomId = Math.floor(1000 + Math.random() * 9000);
-    setName("Amina Salim");
-    setEmail(`taxpayer.${randomId}@example.tz`);
-    setPassword("password123");
-    setTin("987-654-321");
-    setAcceptedPrivacy(true);
-    setError("");
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -79,13 +69,6 @@ export default function RegisterPage() {
         <ReceiptCard className="p-6 shadow-sm border border-paper-line">
           <div className="mb-4 flex items-center justify-between">
             <span className="text-xs font-mono uppercase tracking-wider text-ink-faint">Account Details</span>
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="text-[11px] font-medium text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded border border-emerald-200 transition-colors flex items-center gap-1"
-            >
-              <span>⚡</span> Fill Sample Info
-            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

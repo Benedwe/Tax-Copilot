@@ -8,14 +8,13 @@ import ReceiptCard from "@/components/ReceiptCard";
 import { useAuth } from "@/lib/AuthContext";
 
 export default function LoginPage() {
-  const { login, demoLogin } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -28,19 +27,6 @@ export default function LoginPage() {
       setError(err.message || "Failed to log in. Please check your credentials.");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleDemoLogin() {
-    setError("");
-    setDemoLoading(true);
-    try {
-      await demoLogin();
-      router.push("/dashboard");
-    } catch (err) {
-      setError(err.message || "Demo login failed. Please try again.");
-    } finally {
-      setDemoLoading(false);
     }
   }
 
@@ -97,7 +83,7 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading || demoLoading}
+                disabled={loading}
                 className="w-full bg-ink text-paper py-2.5 rounded-sm hover:bg-ink-soft transition-colors disabled:opacity-60 font-medium text-sm flex items-center justify-center gap-2"
               >
                 {loading ? (

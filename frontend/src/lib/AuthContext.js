@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "./supabaseClient";
 
 import { api } from "./api";
 
@@ -83,10 +82,6 @@ export function AuthProvider({ children }) {
     throw new Error("Login failed.");
   }
 
-  async function demoLogin() {
-    return login("demo@taxcopilot.tz", "password123");
-  }
-
   async function register(name, email, password, tin) {
     api.clearCache();
     const cleanEmail = (email || "").toLowerCase().trim();
@@ -131,7 +126,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, hasValidTin, login, demoLogin, register, updateUserTin, logout }}
+      value={{ user, loading, hasValidTin, login, register, updateUserTin, logout }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,18 +1,23 @@
 import { Router } from "express";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { findUserByEmail, findUserById, createUser, updateUser } from "../lib/db.js";
+import {
+  findUserByEmailStrict,
+  findUserByIdStrict,
+  createUserStrict,
+  updateUserStrict,
+} from "../lib/db.js";
 
 import { requireAuth } from "../middleware/auth.js";
+import { createAuthService, isDatabaseConnectivityError } from "../services/authService.js";
 
 const router = Router();
 
-export function formatTin(rawTin) {
-  const digits = String(rawTin || "").replace(/\D/g, "");
-  if (digits.length !== 9) return null;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}`;
-}
+const authService = createAuthService({
+  findUserByEmail: findUserByEmailStrict,
+  findUserById: findUserByIdStrict,
+  createUser: createUserStrict,
+  updateUser: updateUserStrict,
+});
 
 const registerSchema = z.object({
   name: z.string().trim().min(1, "Full name is required"),
@@ -36,27 +41,13 @@ router.post("/register", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.errors[0].message });
   }
-  const { name, email, password, tin } = parsed.data;
-  const cleanEmail = email;
-  const formattedTin = formatTin(tin);
-
-  const existing = await findUserByEmail(cleanEmail);
-  if (existing) {
-    return res.status(409).json({ error: "An account with that email already exists." });
+  try {
+    const result = await authService.register(parsed.data);
+    setAuthCookie(res, result.token);
+    return res.status(201).json(result);
+  } catch (err) {
+    return sendAuthError(res, err, "Unable to create the account right now.");
   }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await createUser({
-    name: name.trim(),
-    email: cleanEmail,
-    passwordHash,
-    authProvider: "password",
-    tin: formattedTin,
-  });
-
-  const token = signToken(user);
-  setAuthCookie(res, token);
-  return res.status(201).json({ token, user: publicUser(user) });
 });
 
 const loginSchema = z.object({
@@ -72,22 +63,13 @@ router.post("/login", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.errors[0].message });
   }
-  const { email, password } = parsed.data;
-  const cleanEmail = email.toLowerCase().trim();
-
-  const user = await findUserByEmail(cleanEmail);
-  if (!user || !user.passwordHash) {
-    return res.status(401).json({ error: "Invalid email or password." });
+  try {
+    const result = await authService.login(parsed.data);
+    setAuthCookie(res, result.token);
+    return res.json(result);
+  } catch (err) {
+    return sendAuthError(res, err, "Invalid email or password.");
   }
-
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) {
-    return res.status(401).json({ error: "Invalid email or password." });
-  }
-
-  const token = signToken(user);
-  setAuthCookie(res, token);
-  return res.json({ token, user: publicUser(user) });
 });
 
 router.post("/logout", (req, res) => {
@@ -97,31 +79,27 @@ router.post("/logout", (req, res) => {
 
 // Fetch current user details & TIN validation status
 router.get("/me", requireAuth, async (req, res) => {
-  const user = await findUserById(req.user.id);
-  if (!user) return res.status(404).json({ error: "User not found." });
-
-  return res.json({
-    user: publicUser(user),
-    hasValidTin: Boolean(user.tin && formatTin(user.tin)),
-  });
+  try {
+    const result = await authService.me(req.user.id);
+    return res.json(result);
+  } catch (err) {
+    return sendAuthError(res, err, "Unable to load the current user.");
+  }
 });
 
 // Update/Add compulsory TRA TIN for current user
 router.put("/tin", requireAuth, async (req, res) => {
   const { tin } = req.body || {};
-  const formatted = formatTin(tin);
-  if (!formatted) {
-    return res.status(400).json({
-      error: "TIN must be a valid 9-digit TRA Taxpayer Identification Number (e.g. 123-456-789 or 123456789).",
-    });
+  try {
+    const result = await authService.updateTin(req.user.id, tin);
+    return res.json(result);
+  } catch (err) {
+    return sendAuthError(
+      res,
+      err,
+      "TIN must be a valid 9-digit TRA Taxpayer Identification Number (e.g. 123-456-789 or 123456789)."
+    );
   }
-
-  const updatedUser = await updateUser(req.user.id, { tin: formatted });
-
-  return res.json({
-    user: publicUser(updatedUser),
-    hasValidTin: true,
-  });
 });
 
 // Google login stub: the frontend can use Supabase Auth client-side
@@ -131,18 +109,6 @@ router.post("/google", async (req, res) => {
     error: "Google sign-in not yet configured. Add Supabase auth handling here if you want a backend callback route.",
   });
 });
-
-function signToken(user) {
-  const jwtSecret = process.env.JWT_SECRET || "tax-copilot-dev-secret-key-2026";
-  return jwt.sign({ id: user.id, email: user.email }, jwtSecret, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-  });
-}
-
-function publicUser(user) {
-  const { passwordHash, ...rest } = user;
-  return rest;
-}
 
 function setAuthCookie(res, token) {
   const isProd = process.env.NODE_ENV === "production";
@@ -165,6 +131,12 @@ function setAuthCookie(res, token) {
   }
 }
 
+function sendAuthError(res, err, fallbackMessage) {
+  const status = err?.status || (isDatabaseConnectivityError(err) ? 503 : 500);
+  const message = err?.message || fallbackMessage;
+  return res.status(status).json({ error: message });
+}
+
 function clearAuthCookie(res) {
   const isProd = process.env.NODE_ENV === "production";
   if (typeof res.clearCookie === "function") {
@@ -178,5 +150,3 @@ function clearAuthCookie(res) {
 }
 
 export default router;
-
-

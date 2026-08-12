@@ -53,7 +53,8 @@ function DashboardContent() {
         <div className="flex items-center justify-between mb-10">
           <div>
             <p className="text-xs tracking-[0.2em] uppercase text-brass-dark font-medium mb-2">Dashboard</p>
-            <h1 className="text-3xl text-ink">Hello, {user?.name?.split(" ")[0]}.</h1>
+            <h1 className="text-3xl text-ink">Welcome back{user?.name ? `, ${user.name}` : ""}.</h1>
+            <p className="mt-2 text-sm text-ink-soft">Your tax workspace is ready.</p>
           </div>
           <button
             onClick={handleNewReturn}

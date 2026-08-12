@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { supabaseAdmin } from "../lib/supabaseClient.js";
-import { findUserById, findUserByEmail, createUser, updateUser } from "../lib/db.js";
+import { findUserByIdStrict, findUserByEmailStrict, createUserStrict, updateUserStrict } from "../lib/db.js";
+import { isDatabaseConnectivityError } from "../services/authService.js";
 
 export function parseCookies(req) {
   if (req.cookies) return req.cookies;
@@ -34,20 +35,20 @@ export async function requireAuth(req, res, next) {
         const { user } = data;
         const metadata = user.user_metadata || {};
 
-        let localUser = await findUserById(user.id);
+        let localUser = await findUserByIdStrict(user.id);
         if (!localUser && user.email) {
-          localUser = await findUserByEmail(user.email);
+          localUser = await findUserByEmailStrict(user.email);
         }
 
         if (localUser) {
-          localUser = await updateUser(localUser.id, {
+          localUser = await updateUserStrict(localUser.id, {
             email: user.email,
             name: metadata.name || localUser.name || user.email,
             tin: metadata.tin ?? localUser.tin ?? undefined,
             authProvider: "supabase",
           });
         } else {
-          localUser = await createUser({
+          localUser = await createUserStrict({
             email: user.email,
             name: metadata.name || user.email,
             tin: metadata.tin ?? undefined,
@@ -59,6 +60,11 @@ export async function requireAuth(req, res, next) {
         return next();
       }
     } catch (err) {
+      if (isDatabaseConnectivityError(err)) {
+        return res.status(503).json({
+          error: "Database connection failed. Please try again shortly.",
+        });
+      }
       // Fallback to local JWT verification below if Supabase token check errors
     }
   }
@@ -72,5 +78,3 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ error: "Invalid or expired token." });
   }
 }
-
-
