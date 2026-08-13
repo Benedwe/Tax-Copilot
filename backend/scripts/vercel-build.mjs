@@ -6,16 +6,17 @@ function run(command) {
 
 run("npx prisma generate");
 
-const dbUrl = process.env.DATABASE_URL?.trim();
+const dbUrl = (process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL)?.trim();
 
 if (!dbUrl) {
   console.warn(
     "\n⚠ DATABASE_URL is not set — skipping prisma migrate deploy.\n" +
-      "  Add DATABASE_URL in Vercel → Project Settings → Environment Variables,\n" +
+      "  Add DATABASE_URL (or SUPABASE_DATABASE_URL) in Vercel → Project Settings → Environment Variables,\n" +
       "  then redeploy so migrations can run.\n"
   );
   process.exit(0);
 }
+
 
 if (dbUrl.includes("localhost") || dbUrl.includes("127.0.0.1") || dbUrl.includes("0.0.0.0")) {
   console.warn(

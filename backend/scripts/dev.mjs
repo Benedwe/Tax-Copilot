@@ -5,8 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendRoot = path.resolve(__dirname, "..");
-const databaseUrl = process.env.DATABASE_URL || "";
+const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL || "";
 const dbTarget = parseDatabaseUrl(databaseUrl);
+
 
 async function main() {
   if (dbTarget && isLocalDatabase(dbTarget)) {
