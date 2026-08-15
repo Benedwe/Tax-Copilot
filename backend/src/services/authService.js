@@ -20,16 +20,22 @@ export function isUniqueConstraintError(err) {
 export function isDatabaseConnectivityError(err) {
   const message = String(err?.message || "");
   return (
+    err?.code === "P1000" ||
     err?.code === "P1001" ||
     err?.code === "P1002" ||
+    err?.code === "P1003" ||
     err?.code === "P1017" ||
     err?.code === "P2024" ||
     message.includes("Can't reach database server") ||
     message.includes("Database connection failed") ||
+    message.includes("Authentication failed") ||
     message.includes("ECONNREFUSED") ||
-    message.includes("Connection terminated unexpectedly")
+    message.includes("ETIMEDOUT") ||
+    message.includes("Connection terminated unexpectedly") ||
+    message.includes("[Database Config Error]")
   );
 }
+
 
 export function createAuthService({
   findUserByEmail,

@@ -42,7 +42,7 @@ app.use(cookieParser());
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
-  message: { error: "Too many requests from this IP, please try again later." },
+  message: { error: "Too many requests , please try again later." },
 });
 app.use(globalLimiter);
 
@@ -80,26 +80,24 @@ app.use("/api/documents", documentRoutes);
 app.use("/api/tax-returns", taxReturnRoutes);
 app.use("/api/calculator", calculatorRoutes);
 
+import { isDatabaseConnectivityError } from "./services/authService.js";
+
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
 
 // Global error handler
+
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error("API Error Handler caught error:", err);
 
-  const msg = err.message || "";
-  if (
-    err.code === "P1001" ||
-    err.code === "P1002" ||
-    msg.includes("Can't reach database server") ||
-    msg.includes("ECONNREFUSED")
-  ) {
-    return res.status(500).json({
-      error: "Database connection failed. Please ensure the PostgreSQL database service is running and DATABASE_URL is reachable.",
+  if (isDatabaseConnectivityError(err) || err.code?.startsWith("P10")) {
+    return res.status(503).json({
+      error: "Database connection failed. Please ensure your PostgreSQL/Supabase database service is reachable and DATABASE_URL is properly set in your hosting provider settings.",
     });
   }
 
   res.status(err.status || 500).json({ error: err.message || "Internal server error." });
 });
+
 
 export default app;

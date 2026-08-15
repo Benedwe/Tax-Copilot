@@ -37,7 +37,7 @@ export default function RegisterPage() {
 
     const cleanTin = tin.replace(/[\s-]/g, "");
     if (cleanTin.length !== 9) {
-      setError("Compulsory TRA TIN must be exactly 9 digits (e.g. 123-456-789)");
+      setError("Compulsory TRA TIN must be exactly 9 digits");
       return;
     }
 

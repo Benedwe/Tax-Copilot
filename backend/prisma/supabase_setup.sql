@@ -38,7 +38,7 @@ DO $$ BEGIN
         'REVIEWED',
         'GENERATED',
         'FILED'
-    );
+    );                                                                                                                                    
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- 2. Create User Table
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS public."User" (
     "email" TEXT NOT NULL UNIQUE,
     "passwordHash" TEXT,
     "authProvider" TEXT NOT NULL DEFAULT 'password',
-    "tin" TEXT,
+    "tin" TEXT NOT NULL UNIQUE,
     "country" TEXT NOT NULL DEFAULT 'TZ',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
