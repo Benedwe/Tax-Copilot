@@ -83,10 +83,6 @@ app.use("/api/calculator", calculatorRoutes);
 import { isDatabaseConnectivityError } from "./services/authService.js";
 
 app.use((req, res) => res.status(404).json({ error: "Not found." }));
-
-// Global error handler
-
-// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error("API Error Handler caught error:", err);
 
