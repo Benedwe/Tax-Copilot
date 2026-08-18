@@ -49,7 +49,7 @@ app.use(globalLimiter);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
-  message: { error: "Too many authentication attempts, please try again in 15 minutes." },
+  message: { error: "Too many attempts, please try again in 15 minutes." },
 });
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
